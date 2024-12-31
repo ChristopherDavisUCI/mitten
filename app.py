@@ -30,7 +30,7 @@ def update_position_series(pos_series):
 def is_complete_lineup(total_series):
     return (
         (total_series["QB"] >= 1) and (total_series["RB"] >= 1) and (total_series["WR/TE"] >= 2) and 
-        ((total_series["WR/TE"] + total_series["WR/TE"]) >= 4)
+        ((total_series["WR/TE"] + total_series["RB"]) >= 4)
     )
 
 
