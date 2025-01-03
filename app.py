@@ -27,7 +27,7 @@ st.set_page_config(page_title="Playoff lineups", page_icon=":material/sports_foo
 
 st.title("Playoff lineups")
 
-st.write("Have Underdog email you your exposure csv file and upload it below.")
+st.write("Have Underdog email you your exposure csv file and upload it below.  (As far as I can tell, this is only possible from the Exposure section on Desktop, not Mobile.)")
 
 file = st.file_uploader("Exposure csv", type="csv", accept_multiple_files=False)
 
