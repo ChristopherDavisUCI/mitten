@@ -72,11 +72,12 @@ def process_draft(df_draft, key):
                 matchup_dct[pair] = [key]
 
 try:
-    df = pd.read_csv(file)
+    df = pd.read_csv(file, parse_dates=True)
+    df = df.sort_values("Picked At", ascending=False)
     df["Team"] = df["Team"].apply(get_abbr)
     df = combine_names(df, "First Name", "Last Name")
     
-    for key, df_draft in df.groupby("Draft"):
+    for key, df_draft in df.groupby("Draft", sort=False):
         process_draft(df_draft, key)
 except ValueError:
     pass
