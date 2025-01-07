@@ -72,7 +72,8 @@ def process_draft(df_draft, key):
                 matchup_dct[pair] = [key]
 
 try:
-    df = pd.read_csv(file, parse_dates=True)
+    df = pd.read_csv(file)
+    df["Picked At"] = pd.to_datetime(df["Picked At"])
     df = df.sort_values("Picked At", ascending=False)
     df["Team"] = df["Team"].apply(get_abbr)
     df = combine_names(df, "First Name", "Last Name")
