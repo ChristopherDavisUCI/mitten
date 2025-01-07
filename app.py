@@ -39,7 +39,7 @@ def update_position_series(pos_series):
     pos_dct = {}
     pos_dct["QB"] = pos_series.get("QB", 0)
     pos_dct["RB"] = pos_series.get("RB", 0)
-    pos_dct["WR/TE"] = pos_series.get("WR", 0) + pos_dct.get("TE", 0)
+    pos_dct["WR/TE"] = pos_series.get("WR", 0) + pos_series.get("TE", 0)
     return pd.Series(pos_dct)
 
 
