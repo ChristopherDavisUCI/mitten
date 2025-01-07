@@ -31,6 +31,8 @@ st.write("(This is only tested on Chrome.)  Have Underdog email you your exposur
 
 file = st.file_uploader("Exposure csv", type="csv", accept_multiple_files=False)
 
+st.write("For a given matchup, drafts are sorted with most recent at the top.")
+
 # Keys are tuples of super bowl matchups (AFC, NFC), values are lists of draft boards
 matchup_dct = {}
 
