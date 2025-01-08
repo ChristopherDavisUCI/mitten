@@ -17,11 +17,17 @@ div_series.name = None
 # AFC WEST -> AFC
 conf_series = div_series.apply(lambda s: s.split()[0])
 
-df_ranks = pd.read_csv("data/rankings.csv")
+df_ranks = pd.read_csv("data/playoff_rankings.csv")
 df_ranks["Team"] = df_ranks["teamName"].apply(get_abbr)
 df_ranks = combine_names(df_ranks, "firstName", "lastName")
 df_ranks["adp"] = pd.to_numeric(df_ranks["adp"], errors='coerce')
 adp_dct = dict(zip(df_ranks["Name"], df_ranks["adp"]))
+
+df_wc = pd.read_csv("data/wc_rankings.csv")
+df_wc = combine_names(df_wc, "firstName", "lastName")
+df_wc.set_index("Name", drop=True, inplace=True)
+# Series with keys player names and values UD projected points
+wc_series = df_wc["projectedPoints"]
 
 st.set_page_config(page_title="Playoff lineups", page_icon=":material/sports_football:", layout="wide")
 
@@ -31,10 +37,15 @@ st.write("(This is only tested on Chrome.)  Have Underdog email you your exposur
 
 file = st.file_uploader("Exposure csv", type="csv", accept_multiple_files=False)
 
-st.write("For a given matchup, drafts are sorted with most recent at the top.")
+st.write("The 'WC Score' value is from the Underdog wildcard projections")
 
 # Keys are tuples of super bowl matchups (AFC, NFC), values are lists of draft boards
 matchup_dct = {}
+
+# Simple Underdog projected scores for round 1
+# Key is a draft key, value is the projected score
+wc_scores = {}
+date_dct = {}
 
 # Basically just to combine WR and TE
 def update_position_series(pos_series):
@@ -73,6 +84,18 @@ def process_draft(df_draft, key):
             except KeyError:
                 matchup_dct[pair] = [key]
 
+
+def get_wc_scores(df_draft):
+    # The UD projected wildcard score of the top QB plus all non-QB player scores
+    qb_score = df_draft.query("Position == 'QB'")["Name"].map(lambda name: wc_series.get(name, 0)).values.max()
+    wrte_scores = df_draft.query("(Position == 'WR') or (Position == 'TE')")["Name"].map(lambda name: wc_series.get(name, 0)).sort_values(ascending=False)
+    wrte_score = wrte_scores[:2].sum()
+    rb_scores = df_draft.query("Position == 'RB'")["Name"].map(lambda name: wc_series.get(name, 0)).sort_values(ascending=False)
+    rb_score = rb_scores.max()
+    wrte_flex = 0 if len(wrte_scores) < 3 else wrte_scores.values[2]
+    rb_flex = 0 if len(rb_scores) < 2 else rb_scores.values[1]
+    return qb_score + wrte_score + rb_score + max(wrte_flex, rb_flex)
+
 try:
     df = pd.read_csv(file)
     df["Picked At"] = pd.to_datetime(df["Picked At"])
@@ -82,6 +105,8 @@ try:
     
     for key, df_draft in df.groupby("Draft", sort=False):
         process_draft(df_draft, key)
+        wc_scores[key] = get_wc_scores(df_draft)
+        date_dct[key] = df_draft["Picked At"].iloc[0]
 except ValueError:
     pass
 
@@ -98,6 +123,9 @@ for pair, keys in sorted(matchup_dct.items(), key= lambda tup: len(tup[1]), reve
     all_names = sorted(all_names, key=lambda name: adp_dct[name])
 
     row_template_dct = {name: "" for name in all_names}
+    row_template_dct["WC score"] = 0
+    row_template_dct["date"] = ""
+    row_template_dct["draft board"] = ""
 
     full_list = []
 
@@ -107,10 +135,14 @@ for pair, keys in sorted(matchup_dct.items(), key= lambda tup: len(tup[1]), reve
         row_dct = row_template_dct.copy()
         for name in df[(df["Draft"] == key) & (df["Team"].isin(pair))]["Name"].values:
             row_dct[name] = "X"
+        row_dct["WC score"] = round(wc_scores[key])
+        row_dct["draft board"] = f"https://underdogfantasy.com/draft-board/{key}"
+        row_dct["date"] = f"{date_dct[key]:%b\xa0%d}"
         
         full_list.append(row_dct)
 
-    df_full = pd.DataFrame(full_list, index=range(1, len(keys)+1))
+    df_full = pd.DataFrame(full_list).sort_values("WC score", ascending=False)
+    df_full.index = index=range(1, len(keys)+1)
 
     df_full = df_full.style.set_table_styles(
         [dict(selector="th",props=[('max-width', '40px'), ('max-height', '280px')]),
